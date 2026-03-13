@@ -161,11 +161,21 @@ class LocalPlanClient:
         }
 
 def main(
-        episodes:int = 1,
+        episodes: int = 1,
         headless: bool = True,
         scene: int = 1,
         pkl_path: str = os.path.expanduser("~/pi-sim-evals/tiptop_assets/tiptop_traj.pkl"),
         ):
+    """Run evaluation using a local cuTAMP plan pickle file.
+
+    Args:
+        episodes: Number of episodes to run.
+        headless: If True (default), runs without the Isaac Sim GUI and only saves a video file.
+            Set to False to open the Isaac Sim viewport for live visualization:
+            ``uv run python pkl_eval.py --headless False``
+        scene: Scene number (1-5).
+        pkl_path: Path to cuTAMP plan pickle file.
+    """
     # launch omniverse app with arguments (inside function to prevent overriding tyro)
     from isaaclab.app import AppLauncher
     parser = argparse.ArgumentParser(description="Tutorial on creating an empty stage.")

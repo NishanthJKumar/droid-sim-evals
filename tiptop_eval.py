@@ -40,7 +40,9 @@ def main(
 
     Args:
         episodes: Number of episodes to run
-        headless: Run without GUI
+        headless: If True (default), runs without the Isaac Sim GUI and only saves a video file.
+            Set to False to open the Isaac Sim viewport for live visualization:
+            ``uv run python tiptop_eval.py --headless False``
         scene: Scene number (1-5)
         variant: Scene variant (0-9)
         ws_host: Tiptop websocket server host
