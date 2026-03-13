@@ -74,7 +74,7 @@ class SceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/robot/Gripper/Robotiq_2F_85/base_link/wrist_cam",
         height=720,
         width=1280,
-        data_types=["rgb"],
+        data_types=["rgb", "distance_to_image_plane"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=2.8,
             focus_distance=28.0,
@@ -102,9 +102,14 @@ class SceneCfg(InteractiveSceneCfg):
         scene_prim = stage.GetPrimAtPath("/World")
         children = scene_prim.GetChildren()
 
+        _NON_RIGID_PRIMS = {"DomeLight", "Environment", "table", "sphere_light"}
+
         for child in children:
-            # if rigid body
-            if not UsdPhysics.RigidBodyAPI(child):
+            if child.GetName() in _NON_RIGID_PRIMS:
+                continue
+            # Register prims with RigidBodyAPI directly, or payloaded prims
+            # whose referenced asset defines a rigid body internally
+            if not UsdPhysics.RigidBodyAPI(child) and not child.HasPayload():
                 continue
 
             name = child.GetName()
@@ -209,6 +214,39 @@ def gripper_pos(
     return joint_pos
 
 
+def wrist_cam_depth(
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam")
+):
+    """Get wrist camera depth image."""
+    sensor = env.scene[sensor_cfg.name]
+    depth = sensor.data.output["distance_to_image_plane"]
+    return depth
+
+
+def wrist_cam_intrinsics(
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam")
+):
+    """Get wrist camera intrinsic matrix."""
+    sensor = env.scene[sensor_cfg.name]
+    return sensor.data.intrinsic_matrices
+
+
+def wrist_cam_pos_w(
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam")
+):
+    """Get wrist camera position in world frame."""
+    sensor = env.scene[sensor_cfg.name]
+    return sensor.data.pos_w
+
+
+def wrist_cam_quat_w(
+    env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam")
+):
+    """Get wrist camera quaternion in world frame (w, x, y, z)."""
+    sensor = env.scene[sensor_cfg.name]
+    return sensor.data.quat_w_ros  # ROS convention: w, x, y, z
+
+
 @configclass
 class ObservationCfg:
     @configclass
@@ -243,6 +281,10 @@ class ObservationCfg:
                     "normalize": False,
                     }
                 )
+        wrist_depth = ObsTerm(func=wrist_cam_depth)
+        wrist_intrinsics = ObsTerm(func=wrist_cam_intrinsics)
+        wrist_cam_pos_w = ObsTerm(func=wrist_cam_pos_w)
+        wrist_cam_quat_w = ObsTerm(func=wrist_cam_quat_w)
 
         def __post_init__(self) -> None:
             self.enable_corruption = False
@@ -307,5 +349,3 @@ class EnvCfg(ManagerBasedRLEnvCfg):
     
     def set_scene(self, scene_name: str):
         self.scene.dynamic_scene(scene_name)
-
-
