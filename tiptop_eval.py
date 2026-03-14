@@ -24,7 +24,7 @@ import torch
 import tyro
 from tqdm import tqdm
 
-from src.inference.tiptop_websocket import TiptopWebsocketClient
+from src.sim_evals.inference.tiptop_websocket import TiptopWebsocketClient
 from src.visual_utils import add_top_padding, overlay_timer_ms
 
 
