@@ -13,9 +13,12 @@ Usage:
 """
 
 import argparse
+import logging
 from datetime import datetime
 import numpy as np
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 import cv2
 import gymnasium as gym
@@ -58,7 +61,7 @@ def main(
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
 
-    import src.environments  # noqa: F401
+    import src.sim_evals.environments  # noqa: F401
     from isaaclab_tasks.utils import parse_env_cfg
 
     env_cfg = parse_env_cfg(
@@ -76,14 +79,10 @@ def main(
             instruction = "put the can in the mug"
         case 3:
             instruction = "put banana in the bin"
-        case 4: 
-            instruction = "put the meat can on the sugar box"
-        case 5:
-            instruction = "put three cubes into the bowl"
         case _:
-            raise ValueError(f"Scene {scene} not supported")
+            raise ValueError(f"Scene {scene} not supported. Valid scenes are 1-3.")
 
-    env_cfg.set_scene(f"{scene}_{variant}")
+    env_cfg.set_scene(str(scene))
     env_cfg.episode_length_s = 90.0
     env = gym.make("DROID", cfg=env_cfg)
 
@@ -131,8 +130,11 @@ def main(
                 elapsed_ms = int(frame_idx * 1000 / video_fps)
                 overlay_timer_ms(viz, elapsed_ms)
                 if not headless:
-                    cv2.imshow("Camera View", cv2.cvtColor(viz, cv2.COLOR_RGB2BGR))
-                    cv2.waitKey(1)
+                    try:
+                        cv2.imshow("Camera View", cv2.cvtColor(viz, cv2.COLOR_RGB2BGR))
+                        cv2.waitKey(1)
+                    except cv2.error:
+                        pass
 
                 video.append(viz)
                 frame_idx += 1

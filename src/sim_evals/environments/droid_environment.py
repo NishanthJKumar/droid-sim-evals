@@ -214,12 +214,60 @@ def gripper_pos(
     return joint_pos
 
 
+def _safe_image(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    data_type: str,
+    normalize: bool,
+    channels: int,
+) -> torch.Tensor:
+    """Wrapper around mdp.observations.image that returns zeros if the camera annotator
+    has no data yet (e.g. GPU OOM during init, or shape-probing before first sim step)."""
+    try:
+        return mdp.observations.image(env, sensor_cfg=sensor_cfg, data_type=data_type, normalize=normalize)
+    except RuntimeError:
+        sensor = env.scene[sensor_cfg.name]
+        h, w = sensor.cfg.height, sensor.cfg.width
+        return torch.zeros((env.num_envs, h, w, channels), device=env.device, dtype=torch.float32)
+
+
+def external_cam_image(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("external_cam"),
+    data_type: str = "rgb",
+    normalize: bool = False,
+) -> torch.Tensor:
+    return _safe_image(env, sensor_cfg, data_type, normalize, channels=3)
+
+
+def external_cam_2_image(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("external_cam_2"),
+    data_type: str = "rgb",
+    normalize: bool = False,
+) -> torch.Tensor:
+    return _safe_image(env, sensor_cfg, data_type, normalize, channels=3)
+
+
+def wrist_cam_image(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam"),
+    data_type: str = "rgb",
+    normalize: bool = False,
+) -> torch.Tensor:
+    return _safe_image(env, sensor_cfg, data_type, normalize, channels=3)
+
+
 def wrist_cam_depth(
     env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg = SceneEntityCfg("wrist_cam")
 ):
     """Get wrist camera depth image."""
     sensor = env.scene[sensor_cfg.name]
-    depth = sensor.data.output["distance_to_image_plane"]
+    try:
+        depth = sensor.data.output["distance_to_image_plane"]
+    except RuntimeError:
+        h, w = sensor.cfg.height, sensor.cfg.width
+        return torch.zeros((env.num_envs, h, w, 1), device=env.device, dtype=torch.float32)
     return depth
 
 
@@ -258,7 +306,7 @@ class ObservationCfg:
             func=gripper_pos, noise=noise.GaussianNoiseCfg(std=0.05), clip=(0, 1)
         )
         external_cam = ObsTerm(
-                func=mdp.observations.image,
+                func=external_cam_image,
                 params={
                     "sensor_cfg": SceneEntityCfg("external_cam"),
                     "data_type": "rgb",
@@ -266,7 +314,7 @@ class ObservationCfg:
                     }
                 )
         external_cam_2 = ObsTerm(
-                func=mdp.observations.image,
+                func=external_cam_2_image,
                 params={
                     "sensor_cfg": SceneEntityCfg("external_cam_2"),
                     "data_type": "rgb",
@@ -274,7 +322,7 @@ class ObservationCfg:
                     }
                 )
         wrist_cam = ObsTerm(
-                func=mdp.observations.image,
+                func=wrist_cam_image,
                 params={
                     "sensor_cfg": SceneEntityCfg("wrist_cam"),
                     "data_type": "rgb",
@@ -341,9 +389,9 @@ class EnvCfg(ManagerBasedRLEnvCfg):
         self.sim.render_interval = self.decimation
 
         self.sim.physx.enable_ccd = True
-        self.sim.physx.gpu_temp_buffer_capacity = 2**30
-        self.sim.physx.gpu_heap_capacity = 2**30
-        self.sim.physx.gpu_collision_stack_size = 2**30
+        self.sim.physx.gpu_temp_buffer_capacity = 2**26
+        self.sim.physx.gpu_heap_capacity = 2**26
+        self.sim.physx.gpu_collision_stack_size = 2**26
         self.rerender_on_reset = True
 
     

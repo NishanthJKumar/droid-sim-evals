@@ -187,7 +187,7 @@ def main(
     simulation_app = app_launcher.app
 
     # All IsaacLab dependent modules should be imported after the app is launched
-    import src.environments # noqa: F401
+    import src.sim_evals.environments # noqa: F401
     from isaaclab_tasks.utils import parse_env_cfg
 
 

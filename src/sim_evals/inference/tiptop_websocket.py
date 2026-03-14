@@ -67,9 +67,9 @@ class TiptopWebsocketClient(InferenceClient):
 
         self._connect()
 
-    def _connect(self) -> None:
+    def _connect(self, max_retries: int = 12) -> None:
         _log.info(f"Connecting to tiptop server at {self._uri}...")
-        while True:
+        for attempt in range(max_retries):
             try:
                 self._ws = websockets.sync.client.connect(
                     self._uri, compression=None, max_size=None
@@ -77,10 +77,14 @@ class TiptopWebsocketClient(InferenceClient):
                 raw_metadata = self._ws.recv()
                 self._server_metadata = msgpack_numpy.unpackb(raw_metadata)
                 _log.info(f"Connected to tiptop server: {self._server_metadata}")
-                break
+                return
             except ConnectionRefusedError:
-                _log.info("Waiting for tiptop server...")
+                _log.info(f"Waiting for tiptop server... (attempt {attempt + 1}/{max_retries})")
                 time.sleep(5)
+        raise ConnectionRefusedError(
+            f"Could not connect to tiptop server at {self._uri} after {max_retries} attempts. "
+            "Is the server running? Start it with: pixi run python -m tiptop.websocket_server --port 8765"
+        )
 
     @property
     def last_planning_time(self) -> float | None:

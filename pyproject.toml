@@ -11,7 +11,7 @@ dependencies = [
   "isaaclab[all,isaacsim]==2.2.0",
   "tyro>=0.9.17",
   "google>=3.0.0",
-  "google-genai",
+  "google-genai<1.60",
   "websockets>=12.0",
   "msgpack-numpy>=0.4.8",
   "scipy>=1.7.0",
