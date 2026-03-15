@@ -1,6 +1,6 @@
 import argparse
 import os
-import pickle
+import h5py
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -13,6 +13,20 @@ import torch
 import tyro
 from tqdm import tqdm
 from openpi_client import image_tools
+
+
+def load_plan_from_h5(h5_path: str) -> list:
+    plan = []
+    with h5py.File(h5_path, "r") as f:
+        for key in sorted(f.keys()):
+            grp = f[key]
+            step = dict(grp.attrs)
+            if "q_init" in grp:
+                step["q_init"] = grp["q_init"][:]
+            if "positions" in grp:
+                step["positions"] = grp["positions"][:]
+            plan.append(step)
+    return plan
 
 
 class LocalPlanClient:
@@ -54,8 +68,7 @@ class LocalPlanClient:
         self._last_gripper_state = 0.0
         self._q_init_reached = self._q_init is None
 
-    def infer(self, obs: dict, instruction: str) -> dict:
-        del instruction
+    def infer(self, obs: dict) -> dict:
         curr_obs = self._extract_observation(obs)
         return self._step_plan(curr_obs)
 
@@ -89,7 +102,7 @@ class LocalPlanClient:
             if self._plan is None or self._current_plan_step >= len(self._plan):
                 joint_pos = curr_obs["joint_position"]
                 gripper_val = (
-                    curr_obs["gripper_position"][0]
+                    float(curr_obs["gripper_position"][0])
                     if len(curr_obs["gripper_position"]) > 0
                     else self._last_gripper_state
                 )
@@ -97,7 +110,7 @@ class LocalPlanClient:
                 return self._make_result(action, curr_obs)
 
             step = self._plan[self._current_plan_step]
-            if step["type"] == "gripper":
+            if step.get("type") == "gripper":
                 action = step["action"]
                 if action not in {"open", "close"}:
                     raise ValueError(f"Unknown gripper action: {action}")
@@ -161,20 +174,20 @@ class LocalPlanClient:
         }
 
 def main(
+        h5_path: str,
         episodes: int = 1,
         headless: bool = True,
         scene: int = 1,
-        pkl_path: str = os.path.expanduser("~/pi-sim-evals/tiptop_assets/tiptop_traj.pkl"),
         ):
-    """Run evaluation using a local cuTAMP plan pickle file.
+    """Run evaluation using a local cuTAMP plan H5 file.
 
     Args:
         episodes: Number of episodes to run.
         headless: If True (default), runs without the Isaac Sim GUI and only saves a video file.
             Set to False to open the Isaac Sim viewport for live visualization:
-            ``uv run python pkl_eval.py --headless False``
+            ``uv run python replay_h5_traj.py --headless False``
         scene: Scene number (1-5).
-        pkl_path: Path to cuTAMP plan pickle file.
+        h5_path: Path to cuTAMP plan H5 file.
     """
     # launch omniverse app with arguments (inside function to prevent overriding tyro)
     from isaaclab.app import AppLauncher
@@ -198,21 +211,6 @@ def main(
         num_envs=1,
         use_fabric=True,
     )
-    instruction = None
-    match scene:
-        case 1:
-            instruction = "put the cube in the bowl"
-        case 2:
-            instruction = "put the can in the mug"
-        case 3:
-            instruction = "put banana in the bin"
-        case 4: 
-            instruction = "put the meat can on the sugar box"
-        case 5:
-            instruction = "put three cubes into the bowl"
-        case _:
-            raise ValueError(f"Scene {scene} not supported")
-        
     env_cfg.set_scene(scene)
     env_cfg.episode_length_s = 30.0 # LENGTH OF EPISODE
     env = gym.make("DROID", cfg=env_cfg)
@@ -220,9 +218,7 @@ def main(
     obs, _ = env.reset()
     obs, _ = env.reset() # need second render cycle to get correctly loaded materials
 
-    plan_path = Path(pkl_path)
-    with open(plan_path, "rb") as f:
-        cutamp_plan = pickle.load(f)
+    cutamp_plan = load_plan_from_h5(h5_path)
     client = LocalPlanClient(cutamp_plan, gripper_action_steps=20, sim_control_hz=15.0, curobo_interp_hz=50.0)
 
     video_dir = Path("runs") / datetime.now().strftime("%Y-%m-%d") / datetime.now().strftime("%H-%M-%S")
@@ -238,14 +234,17 @@ def main(
                 hold_action = torch.cat([
                     obs["policy"]["arm_joint_pos"],
                     obs["policy"]["gripper_pos"],
-                ], dim=-1).unsqueeze(0)
+                ], dim=-1)
                 obs, _, _, _, _ = env.step(hold_action)
             env.env.episode_length_buf[:] = 0  # don't count settle steps toward episode length
             for i in tqdm(range(max_steps), desc=f"Episode {ep+1}/{episodes}"):
-                ret = client.infer(obs, instruction)
+                ret = client.infer(obs)
                 if not headless:
-                    cv2.imshow("Right Camera", cv2.cvtColor(ret["viz"], cv2.COLOR_RGB2BGR))
-                    cv2.waitKey(1)
+                    try:
+                        cv2.imshow("Camera View", cv2.cvtColor(ret["viz"], cv2.COLOR_RGB2BGR))
+                        cv2.waitKey(1)
+                    except cv2.error:
+                        pass
                 video.append(ret["viz"])
                 action = torch.tensor(ret["action"])[None]
                 obs, _, term, trunc, _ = env.step(action)

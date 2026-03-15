@@ -4,9 +4,6 @@ import torch
 import gymnasium as gym
 import tyro
 import argparse
-import src.sim_evals.environments  # noqa: F401
-from isaaclab.app import AppLauncher
-from isaaclab_tasks.utils import parse_env_cfg
 
 
 def main(scene: int = 1, output: str = "observation.h5"):
@@ -16,6 +13,8 @@ def main(scene: int = 1, output: str = "observation.h5"):
         scene: Scene number (1, 2, or 3).
         output: Path to save the H5 file.
     """
+    from isaaclab.app import AppLauncher
+
     parser = argparse.ArgumentParser()
     AppLauncher.add_app_launcher_args(parser)
     args_cli, _ = parser.parse_known_args()
@@ -23,6 +22,9 @@ def main(scene: int = 1, output: str = "observation.h5"):
     args_cli.headless = True
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
+
+    import src.sim_evals.environments  # noqa: F401
+    from isaaclab_tasks.utils import parse_env_cfg
 
     env_cfg = parse_env_cfg("DROID", device=args_cli.device, num_envs=1, use_fabric=True)
     env_cfg.set_scene(str(scene))

@@ -32,6 +32,7 @@ from src.visual_utils import add_top_padding, overlay_timer_ms
 
 
 def main(
+    instruction: str,
     episodes: int = 1,
     headless: bool = True,
     scene: int = 1,
@@ -50,6 +51,7 @@ def main(
         variant: Scene variant (0-9)
         ws_host: Tiptop websocket server host
         ws_port: Tiptop websocket server port
+        instruction: Natural language task instruction.
     """
     from isaaclab.app import AppLauncher
 
@@ -70,17 +72,6 @@ def main(
         num_envs=1,
         use_fabric=True,
     )
-
-    instruction = None
-    match scene:
-        case 1:
-            instruction = "put the cube in the bowl"
-        case 2:
-            instruction = "put the can in the mug"
-        case 3:
-            instruction = "put banana in the bin"
-        case _:
-            raise ValueError(f"Scene {scene} not supported. Valid scenes are 1-3.")
 
     env_cfg.set_scene(str(scene))
     env_cfg.episode_length_s = 90.0
@@ -109,7 +100,7 @@ def main(
                 hold_action = torch.cat([
                     obs["policy"]["arm_joint_pos"],
                     obs["policy"]["gripper_pos"],
-                ], dim=-1).unsqueeze(0)
+                ], dim=-1)
                 obs, _, _, _, _ = env.step(hold_action)
             env.env.episode_length_buf[:] = 0
             plan_failed = False
@@ -159,6 +150,19 @@ def main(
     client.close()
     env.close()
     simulation_app.close()
+
+    print("\n" + "=" * 60)
+    print("  Run complete")
+    print("=" * 60)
+    print(f"  Instruction : {instruction}")
+    print(f"  Scene       : {scene}")
+    print(f"  Episodes    : {episodes}")
+    print(f"  Output dir  : {video_dir.resolve()}")
+    for ep in range(episodes):
+        video_path = video_dir / f"tiptop_scene{scene}_ep{ep}.mp4"
+        if video_path.exists():
+            print(f"  Video ep{ep}   : {video_path.resolve()}")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
