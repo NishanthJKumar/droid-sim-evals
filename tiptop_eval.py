@@ -29,6 +29,7 @@ import tyro
 from tqdm import tqdm
 
 from src.sim_evals.inference.tiptop_websocket import TiptopWebsocketClient
+from src.sim_evals.sim_utils import settle_sim
 from src.visual_utils import add_top_padding, overlay_timer_ms
 
 
@@ -95,15 +96,7 @@ def main(
         for ep in range(episodes):
             obs, _ = env.reset()
             frame_idx = 0
-            # run sim for ~1 second so objects settle into place
-            settle_steps = 15
-            for _ in range(settle_steps):
-                hold_action = torch.cat([
-                    obs["policy"]["arm_joint_pos"],
-                    obs["policy"]["gripper_pos"],
-                ], dim=-1)
-                obs, _, _, _, _ = env.step(hold_action)
-            env.env.episode_length_buf[:] = 0
+            obs = settle_sim(env, obs, reset_episode_buf=True)
             plan_failed = False
             for i in tqdm(range(max_steps), desc=f"Episode {ep+1}/{episodes}"):
                 try:

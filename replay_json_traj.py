@@ -180,9 +180,9 @@ class LocalPlanClient:
 
 def main(
         json_path: str,
+        scene: int,
         episodes: int = 1,
         headless: bool = True,
-        scene: int = 1,
         ):
     """Run evaluation using a local cuTAMP plan JSON file.
 
@@ -205,7 +205,8 @@ def main(
     simulation_app = app_launcher.app
 
     # All IsaacLab dependent modules should be imported after the app is launched
-    import src.sim_evals.environments # noqa: F401
+    import src.sim_evals.environments  # noqa: F401
+    from src.sim_evals.sim_utils import settle_sim
     from isaaclab_tasks.utils import parse_env_cfg
 
 
@@ -233,15 +234,7 @@ def main(
     max_steps = env.env.max_episode_length
     with torch.no_grad():
         for ep in range(episodes):
-            # Settle phase: run sim for ~1 second so objects settle into place
-            settle_steps = 15  # 15 steps at 15 Hz = 1 second
-            for _ in range(settle_steps):
-                hold_action = torch.cat([
-                    obs["policy"]["arm_joint_pos"],
-                    obs["policy"]["gripper_pos"],
-                ], dim=-1)
-                obs, _, _, _, _ = env.step(hold_action)
-            env.env.episode_length_buf[:] = 0  # don't count settle steps toward episode length
+            obs = settle_sim(env, obs, reset_episode_buf=True)
             for i in tqdm(range(max_steps), desc=f"Episode {ep+1}/{episodes}"):
                 ret = client.infer(obs)
                 if not headless:

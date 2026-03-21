@@ -6,6 +6,8 @@ import torch
 import gymnasium as gym
 import tyro
 
+from src.sim_evals.sim_utils import settle_sim
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,8 @@ def main(scene: int = 1, output: str = "observation.h5"):
 
     obs, _ = env.reset()
     obs, _ = env.reset()  # second reset for correct material loading
+
+    obs = settle_sim(env, obs, steps=100)
 
     def to_numpy(t):
         return t[0].cpu().numpy() if isinstance(t, torch.Tensor) else t[0]

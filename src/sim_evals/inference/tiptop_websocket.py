@@ -1,5 +1,6 @@
 """Tiptop websocket client - connects to tiptop server, gets a plan, executes it."""
 
+import json
 import logging
 import time
 import os
@@ -147,7 +148,7 @@ class TiptopWebsocketClient(InferenceClient):
 
         _log.info("Waiting for plan from tiptop server (this may take a while)...")
         start_time = time.time()
-        response = msgpack_numpy.unpackb(self._ws.recv())
+        response = json.loads(self._ws.recv())
         elapsed = time.time() - start_time
 
         # Store planning time from server (infer_ms) or fall back to client-measured elapsed
@@ -155,8 +156,14 @@ class TiptopWebsocketClient(InferenceClient):
         self._last_planning_time = server_timing.get("infer_ms", elapsed * 1000) / 1000.0
 
         if response["success"]:
-            # Filter out metadata steps (prepended by serialize_plan when q_init is provided)
-            self._plan = [s for s in response["plan"] if s["type"] != "metadata"]
+            # Plan is nested: response["plan"]["steps"]; filter out metadata steps
+            steps = response["plan"]["steps"]
+            for step in steps:
+                if step["type"] == "trajectory":
+                    step["positions"] = np.array(step["positions"], dtype=np.float32)
+                    if "velocities" in step:
+                        step["velocities"] = np.array(step["velocities"], dtype=np.float32)
+            self._plan = [s for s in steps if s["type"] != "metadata"]
             _log.info(f"Received plan with {len(self._plan)} steps in {elapsed:.1f}s")
             for i, step in enumerate(self._plan):
                 if step["type"] == "trajectory":
