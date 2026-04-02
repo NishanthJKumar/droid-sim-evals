@@ -16,6 +16,16 @@ Scene 3
 
 ![Scene 3](./docs/scene3.gif)
 
+The simulator includes **5 scenes** (1–5), each with multiple variants that place objects in different configurations:
+
+| Scene | Variants |
+|-------|----------|
+| 1     | 10 (0–9) |
+| 2     | 10 (0–9) |
+| 3     | 11 (0–8, 10–11)    |
+| 4     | 10 (0–9) |
+| 5     | 10 (0–9) |
+
 The simulation is tuned to work *zero-shot* with DROID policies trained on the real-world DROID dataset, so no separate simulation data is required.
 
 **Note:** The current simulator works best for policies trained with *joint position* action space (and *not* joint velocity control). We provide examples for evaluating pi0-FAST-DROID policies trained with joint position control below.
@@ -68,13 +78,13 @@ pi0.5-DROID outputs joint velocities, but the simulation script converts to join
 
 Finally, run the evaluation script:
 ```bash
-python run_eval.py --episodes [INT] --scene [INT] --headless --policy [pi0.5, pi0]
+python run_eval.py --episodes [INT] --scene [INT] --variant [INT] --headless --policy [pi0.5, pi0]
 ```
 
 ## Minimal Example
 
 ```python
-env_cfg.set_scene(scene) # pass scene integer
+env_cfg.set_scene(scene, variant)  # pass scene integer and variant integer
 env = gym.make("DROID", cfg=env_cfg)
 
 obs, _ = env.reset()
