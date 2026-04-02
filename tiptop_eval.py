@@ -9,7 +9,7 @@ Usage:
     # (in tiptop-robot) pixi run python -m tiptop.websocket_server --port 8765
 
     # Then run this evaluation:
-    uv run python tiptop_ws_eval.py --scene 1 --ws-host localhost --ws-port 8765
+    uv run python tiptop_eval.py --scene 1 --ws-host localhost --ws-port 8765
 """
 
 import argparse
@@ -75,7 +75,7 @@ def main(
         use_fabric=True,
     )
 
-    env_cfg.set_scene(str(scene))
+    env_cfg.set_scene(str(scene), variant)
     env_cfg.episode_length_s = 90.0
     env = gym.make("DROID", cfg=env_cfg)
 

@@ -181,6 +181,7 @@ class LocalPlanClient:
 def main(
         json_path: str,
         scene: int,
+        variant: int = 0,
         episodes: int = 1,
         headless: bool = True,
         ):
@@ -193,6 +194,7 @@ def main(
             Set to False to open the Isaac Sim viewport for live visualization:
             ``uv run python replay_json_traj.py --headless False``
         scene: Scene number (1-5).
+        variant: Scene variant (0-9).
     """
     # launch omniverse app with arguments (inside function to prevent overriding tyro)
     from isaaclab.app import AppLauncher
@@ -217,7 +219,7 @@ def main(
         num_envs=1,
         use_fabric=True,
     )
-    env_cfg.set_scene(scene)
+    env_cfg.set_scene(scene, variant)
     env_cfg.episode_length_s = 30.0 # LENGTH OF EPISODE
     env = gym.make("DROID", cfg=env_cfg)
 
@@ -251,7 +253,7 @@ def main(
                     break
 
             client.reset()
-            video_path = video_dir / f"cutamp_scene{scene}_ep{ep}.mp4"
+            video_path = video_dir / f"cutamp_scene{scene}_{variant}_ep{ep}.mp4"
             mediapy.write_video(video_path, video, fps=15)
             logger.info(f"Saved video to {video_path}")
             video = []

@@ -1,25 +1,78 @@
 # DROID Sim Evaluation
 
-This repository contains scripts for evaluating DROID policies in a simple ISAAC Sim environment.
+This repository contains scripts for evaluating DROID policies (and planners!) in a simple ISAAC Sim environment.
 
-Here is an example rollout of a pi0-FAST-DROID policy:
+The simulator includes **5 scenes** (1–5), each with multiple variants that place objects in different configurations:
 
-Scene 1
-
-![Scene 1](./docs/scene1.gif)
-
-Scene 2
-
-![Scene 2](./docs/scene2.gif)
-
-Scene 3
-
-![Scene 3](./docs/scene3.gif)
+| Scene | Variants |
+|-------|----------|
+| 1     | 10 (0–9) |
+| 2     | 10 (0–9) |
+| 3     | 11 (0–8, 10–11)    |
+| 4     | 10 (0–9) |
+| 5     | 10 (0–9) |
 
 The simulation is tuned to work *zero-shot* with DROID policies trained on the real-world DROID dataset, so no separate simulation data is required.
 
 **Note:** The current simulator works best for policies trained with *joint position* action space (and *not* joint velocity control). We provide examples for evaluating pi0-FAST-DROID policies trained with joint position control below.
 
+## Scenes
+
+### Scene 1
+
+> Example instruction: *"Put the Rubik's cube in the bowl."*
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 1 exterior](docs/scene1_0_ext.png) | ![Scene 1 wrist](docs/scene1_0_wrist.png) |
+
+---
+
+### Scene 2
+
+> Example instruction: *"Put the can in the mug."*
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 2 exterior](docs/scene2_0_ext.png) | ![Scene 2 wrist](docs/scene2_0_wrist.png) |
+
+
+---
+
+### Scene 3
+
+> Example instruction: *"Put the banana in the bin."*
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 3 exterior](docs/scene3_0_ext.png) | ![Scene 3 wrist](docs/scene3_0_wrist.png) |
+
+
+---
+
+### Scene 4
+
+> Example instruction: *"Put the cube on the mug and the cans in the bowl."*
+
+A cluttered version of Scene 1 with many distractor objects (soup can, sardine tin, banana, mug, sugar box).
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 4 exterior](docs/scene4_0_ext.png) | ![Scene 4 wrist](docs/scene4_0_wrist.png) |
+
+---
+
+### Scene 5
+
+> Example instruction: *"Put 3 blocks in the bowl."*
+
+A cluttered version of Scene 2 with multiple colored blocks as distractors.
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 5 exterior](docs/scene5_0_ext.png) | ![Scene 5 wrist](docs/scene5_0_wrist.png) |
+
+---
 
 ## Installation
 
@@ -68,13 +121,13 @@ pi0.5-DROID outputs joint velocities, but the simulation script converts to join
 
 Finally, run the evaluation script:
 ```bash
-python run_eval.py --episodes [INT] --scene [INT] --headless --policy [pi0.5, pi0]
+python run_eval.py --episodes [INT] --scene [INT] --variant [INT] --headless --policy [pi0.5, pi0]
 ```
 
 ## Minimal Example
 
 ```python
-env_cfg.set_scene(scene) # pass scene integer
+env_cfg.set_scene(scene, variant)  # pass scene integer and variant integer
 env = gym.make("DROID", cfg=env_cfg)
 
 obs, _ = env.reset()
