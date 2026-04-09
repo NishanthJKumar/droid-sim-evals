@@ -2,7 +2,7 @@
 
 This repository contains scripts for evaluating DROID policies (and planners!) in a simple ISAAC Sim environment.
 
-The simulator includes **5 scenes** (1–5), each with multiple variants that place objects in different configurations:
+The simulator includes **6 scenes** (1–6), each with multiple variants that place objects in different configurations:
 
 | Scene | Variants |
 |-------|----------|
@@ -11,6 +11,7 @@ The simulator includes **5 scenes** (1–5), each with multiple variants that pl
 | 3     | 11 (0–8, 10–11)    |
 | 4     | 10 (0–9) |
 | 5     | 10 (0–9) |
+| 6     | 10 (0–9) |
 
 The simulation is tuned to work *zero-shot* with DROID policies trained on the real-world DROID dataset, so no separate simulation data is required.
 
@@ -71,6 +72,54 @@ A cluttered version of Scene 2 with multiple colored blocks as distractors.
 | Exterior | Wrist |
 |----------|-------|
 | ![Scene 5 exterior](docs/scene5_0_ext.png) | ![Scene 5 wrist](docs/scene5_0_wrist.png) |
+
+---
+
+### Scene 6
+
+> Example instruction: *"Put the Rubik's cube in the bowl."*
+
+Three Rubik's cubes and a bowl. Each variant randomizes the position and rotation of all three cubes.
+
+---
+
+## Generating Scene Assets
+
+Scene USD files are not committed to the repository (the `assets/` directory is gitignored). Download the pre-built assets using the command in the Quick Start section, or generate them locally.
+
+### Downloading pre-built assets
+
+```bash
+curl -O https://tiptop-sim-assets.s3.us-east-1.amazonaws.com/assets.zip
+unzip assets.zip
+```
+
+### Generating Scene 6
+
+Scene 6 is generated locally from `create_scene6.py`, which builds 10 variants (`scene6_0.usd` – `scene6_9.usd`) by copying the scene 1 template and replacing the single cube with three randomized cubes:
+
+```bash
+# Requires the venv to be activated and the Isaac Sim USD libs on the path
+USD_LIBS=.venv/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+8131b85d.lx64.r.cp311
+PY_LIB=$(python3 -c "import sys; print([p for p in sys.path if 'uv/python' in p and 'lib' in p][0])" 2>/dev/null || echo "")
+PYTHONPATH=$USD_LIBS LD_LIBRARY_PATH=$USD_LIBS/bin:$PY_LIB python3 create_scene6.py
+```
+
+Once generated, run it like any other scene:
+
+```bash
+python tiptop_eval.py --scene 6 --variant 0 --instruction "Put the Rubik's cube in the bowl."
+```
+
+### Creating your own scenes
+
+The `create_scene6.py` script shows the general pattern for building a new scene:
+
+1. **Copy a template** — `shutil.copy` an existing scene USD to preserve the table, lights, and robot without flattening payloads.
+2. **Remove unwanted prims** — `stage.RemovePrim(path)` to strip objects you don't need.
+3. **Copy object prims with `Sdf.CopySpec`** — this copies the full prim spec tree, including the inlined collision child (e.g. `RubikCube` with `PhysxConvexHullCollisionAPI`). Creating prims from scratch misses these collision overrides and causes objects to fall through the table.
+4. **Update the transform** — set `xformOp:translate` and `xformOp:rotateZYX` on the copied prim to place it at the desired position.
+5. **Save** — `stage.Save()` writes the modified binary USD in place.
 
 ---
 
