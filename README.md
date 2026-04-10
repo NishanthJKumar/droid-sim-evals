@@ -2,7 +2,7 @@
 
 This repository contains scripts for evaluating DROID policies (and planners!) in a simple ISAAC Sim environment.
 
-The simulator includes **6 scenes** (1–6), each with multiple variants that place objects in different configurations:
+The simulator includes **7 scenes** (1–7), each with multiple variants that place objects in different configurations:
 
 | Scene | Variants |
 |-------|----------|
@@ -12,6 +12,7 @@ The simulator includes **6 scenes** (1–6), each with multiple variants that pl
 | 4     | 10 (0–9) |
 | 5     | 10 (0–9) |
 | 6     | 10 (0–9) |
+| 7     | 10 (0–9) |
 
 The simulation is tuned to work *zero-shot* with DROID policies trained on the real-world DROID dataset, so no separate simulation data is required.
 
@@ -83,6 +84,14 @@ Three Rubik's cubes and a bowl. Each variant randomizes the position and rotatio
 
 ---
 
+### Scene 7
+
+> Example instruction: *"Pick up a Rubik's cube."*
+
+A cluttered version of Scene 6 with a bowl and distractor objects (tomato soup can, banana, potted meat can, mug, sugar box, mustard bottle). Each variant randomizes positions for all objects.
+
+---
+
 ## Generating Scene Assets
 
 Scene USD files are not committed to the repository (the `assets/` directory is gitignored). Download the pre-built assets using the command in the Quick Start section, or generate them locally.
@@ -105,10 +114,21 @@ PY_LIB=$(python3 -c "import sys; print([p for p in sys.path if 'uv/python' in p 
 PYTHONPATH=$USD_LIBS LD_LIBRARY_PATH=$USD_LIBS/bin:$PY_LIB python3 create_scene6.py
 ```
 
-Once generated, run it like any other scene:
+### Generating Scene 7
+
+Scene 7 is generated locally from `create_scene7.py`, which builds 10 variants (`scene7_0.usd` – `scene7_9.usd`) by copying the scene 4 template (which includes distractor objects), removing the bowl and single cube, and adding three randomized cubes:
+
+```bash
+USD_LIBS=.venv/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+8131b85d.lx64.r.cp311
+PY_LIB=$(python3 -c "import sys; print([p for p in sys.path if 'uv/python' in p and 'lib' in p][0])" 2>/dev/null || echo "")
+PYTHONPATH=$USD_LIBS LD_LIBRARY_PATH=$USD_LIBS/bin:$PY_LIB python3 create_scene7.py
+```
+
+Once generated, run scenes like any other:
 
 ```bash
 python tiptop_eval.py --scene 6 --variant 0 --instruction "Put the Rubik's cube in the bowl."
+python tiptop_eval.py --scene 7 --variant 0 --instruction "Pick up a Rubik's cube."
 ```
 
 ### Creating your own scenes
