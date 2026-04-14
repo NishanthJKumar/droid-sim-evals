@@ -92,6 +92,20 @@ A cluttered version of Scene 6 with a bowl and distractor objects (tomato soup c
 
 ---
 
+### Scene 8
+
+> Example instruction: *"Put the Rubik's cubes in the bowl."*
+
+A "pre-occupied bowl" variant: one Rubik's cube already sits inside the bowl at the start of the episode, with two more cubes scattered on the open table. The task is non-trivial because the bowl is already partially occupied — the robot has to pack, stack, or first remove the existing cube before the remaining cubes can fit.
+
+| Exterior | Wrist |
+|----------|-------|
+| ![Scene 8 exterior](docs/scene8_1_ext.png) | ![Scene 8 wrist](docs/scene8_1_wrist.png) |
+
+> **Asset note**: an earlier attempt at Scene 8 used Scene 5's colored-block assets (blue/red/green/yellow/basic) as the items to place. Those assets turned out to be unusable for repositioning into the bowl: each block has its `PhysicsRigidBodyAPI` on the parent prim (`/World/<color>_block`) while the visual/collision mesh lives on a `Cube` child with a non-zero local `xformOp:translate` — for example `red_block/Cube` has a `(+0.148, -0.002, -0.063)` offset baked in. That means the physics body and the visual mesh are decoupled by up to 15 cm, so there is no single `parent.translate` that puts both the rigid body and the visible cube inside the bowl. Any attempt to normalize the child xform (zeroing its translate) changes how the mesh sits relative to the parent and causes the blocks to settle on the table rather than inside the bowl. Scene 8 therefore uses Scene 1's Rubik's-cube asset instead, which has coincident physics/visual transforms and repositions cleanly.
+
+---
+
 ## Generating Scene Assets
 
 Scene USD files are not committed to the repository (the `assets/` directory is gitignored). Download the pre-built assets using the command in the Quick Start section, or generate them locally.
@@ -122,6 +136,16 @@ Scene 7 is generated locally from `create_scene7.py`, which builds 10 variants (
 USD_LIBS=.venv/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+8131b85d.lx64.r.cp311
 PY_LIB=$(python3 -c "import sys; print([p for p in sys.path if 'uv/python' in p and 'lib' in p][0])" 2>/dev/null || echo "")
 PYTHONPATH=$USD_LIBS LD_LIBRARY_PATH=$USD_LIBS/bin:$PY_LIB python3 create_scene7.py
+```
+
+### Generating Scene 8
+
+Scene 8 is generated locally from `create_scene8.py`, which builds 10 variants (`scene8_0.usd` – `scene8_9.usd`) from the scene 1 template by adding three Rubik's cubes: one dropped into the bowl and two placed at randomized positions on the open table:
+
+```bash
+USD_LIBS=.venv/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-1.0.1+8131b85d.lx64.r.cp311
+PY_LIB=$(python3 -c "import sys; print([p for p in sys.path if 'uv/python' in p and 'lib' in p][0])" 2>/dev/null || echo "")
+PYTHONPATH=$USD_LIBS LD_LIBRARY_PATH=$USD_LIBS/bin:$PY_LIB python3 create_scene8.py
 ```
 
 Once generated, run scenes like any other:
